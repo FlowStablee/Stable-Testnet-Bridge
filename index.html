@@ -10,7 +10,8 @@
   <style>
     :root {
       --bg: #020617;
-      --card-bg: rgba(15, 23, 42, 0.8);
+      --card-bg: rgba(15, 23, 42, 0.6);
+      --modal-bg: rgba(15, 23, 42, 0.95);
       --border: rgba(255, 255, 255, 0.08);
       --accent: #3b82f6;
       --accent-glow: rgba(59, 130, 246, 0.5);
@@ -23,47 +24,66 @@
     body {
       font-family: 'Inter', sans-serif;
       background-color: var(--bg);
-      /* FlowStable Radial Background */
-      background-image: radial-gradient(circle at 50% 0%, #172554 0%, #020617 60%);
+      background-image: 
+        radial-gradient(circle at 50% 0%, #1e1b4b 0%, transparent 60%),
+        radial-gradient(circle at 50% 100%, #0f172a 0%, var(--bg) 100%);
       color: var(--text);
       height: 100vh;
       display: flex;
       flex-direction: column;
-      overflow: hidden; /* No scrollbars if possible */
+      overflow: hidden;
     }
 
-    /* --- TOP BAR (Floating) --- */
+    /* --- NAVBAR --- */
     .navbar {
       width: 100%;
-      padding: 20px 40px;
+      padding: 24px 40px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       position: absolute;
       top: 0;
-      z-index: 10;
+      left: 0;
+      z-index: 20;
     }
 
     .logo { 
-      font-size: 1.6rem; 
+      font-size: 1.5rem; 
       font-weight: 700; 
-      letter-spacing: -0.03em;
+      letter-spacing: -0.02em;
       color: #fff;
-      text-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+      display: flex; align-items: center; gap: 10px;
     }
     .logo span { color: var(--accent); }
 
+    .nav-right { display: flex; gap: 12px; align-items: center; }
+
+    /* History Button (Icon) */
+    .history-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: 0.3s;
+      color: var(--muted);
+    }
+    .history-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; border-color: rgba(255,255,255,0.2); }
+    .history-btn svg { width: 20px; height: 20px; fill: currentColor; }
+
+    /* Connect Button */
     .connect-btn {
       background: rgba(59, 130, 246, 0.1);
       color: var(--accent);
       border: 1px solid rgba(59, 130, 246, 0.2);
-      padding: 10px 20px;
+      padding: 10px 24px;
       border-radius: 99px;
       font-weight: 600;
       font-size: 0.9rem;
       cursor: pointer;
-      transition: 0.3s;
-      backdrop-filter: blur(5px);
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
     }
     .connect-btn:hover {
       background: var(--accent);
@@ -72,36 +92,72 @@
       border-color: var(--accent);
     }
 
-    /* --- CENTERED CARD LAYOUT --- */
-    .main-container {
+    /* --- CENTERED CARD --- */
+    .main-content {
       flex: 1;
       display: flex;
-      align-items: center;
-      justify-content: center;
+      align-items: center; justify-content: center;
       padding: 20px;
+      position: relative;
     }
 
     .dex-card {
       width: 100%;
-      max-width: 480px;
+      max-width: 460px;
       background: var(--card-bg);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
       border: 1px solid var(--border);
       border-radius: 24px;
-      padding: 30px;
+      padding: 32px;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
       position: relative;
+      overflow: hidden; /* Important for modal clipping */
     }
+
+    /* --- HISTORY MODAL (Overlay inside Card) --- */
+    .history-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: var(--modal-bg);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+      padding: 24px;
+      display: flex; flex-direction: column;
+      transform: translateY(100%); /* Hidden by default */
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .history-overlay.open { transform: translateY(0); }
+
+    .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .history-title { font-weight: 600; font-size: 1rem; color: #fff; }
+    .close-btn { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 1.2rem; }
+    .close-btn:hover { color: #fff; }
+
+    .history-list { flex: 1; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+    .empty-msg { color: var(--muted); font-size: 0.85rem; text-align: center; margin-top: 40px; }
+
+    .tx-item {
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(255,255,255,0.03);
+      padding: 12px; border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.85rem;
+      text-decoration: none;
+      transition: 0.2s;
+    }
+    .tx-item:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); }
+    .tx-type { font-weight: 600; color: #e2e8f0; }
+    .tx-link-text { color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
 
     /* --- TABS --- */
     .tabs {
       display: flex;
       background: rgba(0, 0, 0, 0.3);
       padding: 4px;
-      border-radius: 16px;
-      margin-bottom: 24px;
-      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
     .tab-btn {
       flex: 1;
@@ -110,8 +166,8 @@
       border: none;
       color: var(--muted);
       font-weight: 600;
-      font-size: 0.95rem;
-      border-radius: 12px;
+      font-size: 0.9rem;
+      border-radius: 10px;
       cursor: pointer;
       transition: 0.3s ease;
     }
@@ -119,101 +175,62 @@
     .tab-btn.active {
       background: #1e293b;
       color: white;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       border: 1px solid rgba(255,255,255,0.05);
     }
 
     /* --- INPUTS --- */
     .input-box {
-      background: rgba(0,0,0,0.3);
+      background: rgba(2, 6, 23, 0.4);
       border: 1px solid var(--border);
       border-radius: 18px;
-      padding: 18px;
-      margin-bottom: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
       transition: 0.3s;
     }
-    .input-box:focus-within {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px var(--accent-glow);
-    }
+    .input-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow); }
 
-    .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .label { font-size: 0.85rem; color: var(--muted); font-weight: 500; }
     .balance { font-size: 0.8rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
 
     input {
-      width: 100%;
-      background: transparent;
-      border: none;
-      font-size: 2.2rem;
-      font-weight: 600;
-      color: white;
-      outline: none;
-      font-family: 'Inter', sans-serif;
+      width: 100%; background: transparent; border: none;
+      font-size: 2.4rem; font-weight: 600; color: white; outline: none; font-family: 'Inter', sans-serif;
     }
     input::placeholder { color: #334155; }
 
     .token-pill {
-      background: #1e293b;
-      padding: 6px 12px;
-      border-radius: 99px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: #e2e8f0;
-      display: flex; align-items: center; gap: 8px;
-      border: 1px solid var(--border);
+      background: #1e293b; padding: 6px 12px; border-radius: 99px;
+      font-size: 0.9rem; font-weight: 600; color: #e2e8f0; border: 1px solid var(--border);
     }
 
     /* --- BUTTONS --- */
     .action-btn {
-      width: 100%;
-      padding: 18px;
-      border-radius: 18px;
-      border: none;
-      font-size: 1.05rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: 0.3s;
-      background: var(--accent);
-      color: white;
-      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.25);
-      margin-top: 5px;
+      width: 100%; padding: 18px; border-radius: 16px; border: none;
+      font-size: 1.05rem; font-weight: 600; cursor: pointer; transition: 0.3s;
+      background: var(--accent); color: white; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);
     }
-    .action-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 12px 30px rgba(59, 130, 246, 0.4); }
+    .action-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
     .action-btn:disabled { background: #1e293b; color: #475569; cursor: not-allowed; box-shadow: none; transform: none; }
 
-    .grid-btns { display: flex; gap: 10px; margin-bottom: 12px; }
+    .grid-btns { display: flex; gap: 12px; margin-bottom: 16px; }
     .sec-btn {
-      flex: 1;
-      padding: 14px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      color: var(--accent);
-      font-weight: 600;
-      cursor: pointer;
-      transition: 0.2s;
+      flex: 1; padding: 14px; background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border); border-radius: 14px;
+      color: var(--accent); font-weight: 600; cursor: pointer; transition: 0.2s;
     }
-    .sec-btn:hover:not(:disabled) { background: rgba(255,255,255,0.08); }
+    .sec-btn:hover:not(:disabled) { background: rgba(255,255,255,0.08); transform: translateY(-1px); }
     .sec-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* --- STATUS --- */
     .status-bar {
-      margin-top: 24px;
-      text-align: center;
-      font-size: 0.85rem;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      margin-top: 24px; text-align: center; font-size: 0.8rem;
+      color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 8px; font-family: 'JetBrains Mono', monospace;
     }
-    .dot {
-      width: 6px; height: 6px; border-radius: 50%; background: #475569;
-      box-shadow: 0 0 5px rgba(0,0,0,0.5);
-    }
-    .dot.active { background: #10b981; box-shadow: 0 0 8px #10b981; }
-    .dot.busy { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: #475569; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+    .dot.active { background: #10b981; box-shadow: 0 0 10px #10b981; }
+    .dot.busy { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
 
     .hidden { display: none; }
   </style>
@@ -222,12 +239,29 @@
 
   <nav class="navbar">
     <div class="logo">Flow<span>Stable</span></div>
-    <button id="btnConnect" class="connect-btn" onclick="connect()">Connect Wallet</button>
+    
+    <div class="nav-right">
+      <button class="history-btn" onclick="toggleHistory()" title="Recent Activity">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"></path></svg>
+      </button>
+      
+      <button id="btnConnect" class="connect-btn" onclick="connect()">Connect Wallet</button>
+    </div>
   </nav>
 
-  <div class="main-container">
+  <div class="main-content">
     <div class="dex-card">
       
+      <div id="historyOverlay" class="history-overlay">
+        <div class="history-header">
+          <div class="history-title">Recent Activity</div>
+          <button class="close-btn" onclick="toggleHistory()">×</button>
+        </div>
+        <div id="historyList" class="history-list">
+          <div class="empty-msg">No recent transactions</div>
+        </div>
+      </div>
+
       <div class="tabs">
         <button class="tab-btn active" onclick="setTab('mint')">Mint</button>
         <button class="tab-btn" onclick="setTab('bridge')">Bridge</button>
@@ -294,9 +328,7 @@
   </div>
 
 <script>
-/**
- * FLOWSTABLE V3 - Single File, No Reloads
- */
+/** FLOWSTABLE V6 - With History Modal **/
 
 const CONF = {
   SEPOLIA: {
@@ -304,13 +336,15 @@ const CONF = {
     rpc: "https://ethereum-sepolia-rpc.publicnode.com",
     token: "0xc4DCC311c028e341fd8602D8eB89c5de94625927",
     oapp: "0xc099cD946d5efCC35A99D64E808c1430cEf08126",
-    eid: 40374, lzOpt: "0x00030100110100000000000000000000000000030d40"
+    eid: 40374, lzOpt: "0x00030100110100000000000000000000000000030d40",
+    scan: "https://sepolia.etherscan.io/tx/"
   },
   STABLE: {
     idHex: "0x899", idDec: 2201,
     rpc: "https://rpc.testnet.stable.xyz",
     token: "0x78Cf24370174180738C5B8E352B6D14c83a6c9A9",
-    wrapper: "0xcAB8F3ed8528655E0C2fad1C504c6CfEccf50B90"
+    wrapper: "0xcAB8F3ed8528655E0C2fad1C504c6CfEccf50B90",
+    scan: "https://blockscout.testnet.stable.xyz/tx/"
   }
 };
 
@@ -336,6 +370,52 @@ function setStatus(msg, type='normal') {
   d.className = type === 'busy' ? 'dot busy' : (type === 'success' ? 'dot active' : 'dot');
 }
 
+// HISTORY
+function toggleHistory() {
+  get('historyOverlay').classList.toggle('open');
+}
+
+function addTx(type, hash, net) {
+  const list = get('historyList');
+  if(list.querySelector('.empty-msg')) list.innerHTML = ''; // clear empty msg
+  
+  const explorer = (net === 'SEP') ? CONF.SEPOLIA.scan : CONF.STABLE.scan;
+  const item = document.createElement('a');
+  item.className = 'tx-item';
+  item.href = explorer + hash;
+  item.target = "_blank";
+  item.innerHTML = `
+    <span class="tx-type">${type}</span>
+    <span class="tx-link-text">${hash.slice(0,6)}...${hash.slice(-4)} ↗</span>
+  `;
+  list.prepend(item);
+  
+  // LocalStorage
+  const saved = JSON.parse(localStorage.getItem('fs_txs') || '[]');
+  saved.unshift({type, hash, net});
+  localStorage.setItem('fs_txs', JSON.stringify(saved.slice(0,10)));
+}
+
+function loadHistory() {
+  const saved = JSON.parse(localStorage.getItem('fs_txs') || '[]');
+  const list = get('historyList');
+  if(saved.length > 0) {
+    list.innerHTML = '';
+    saved.forEach(tx => {
+      const explorer = (tx.net === 'SEP') ? CONF.SEPOLIA.scan : CONF.STABLE.scan;
+      const item = document.createElement('a');
+      item.className = 'tx-item';
+      item.href = explorer + tx.hash;
+      item.target = "_blank";
+      item.innerHTML = `
+        <span class="tx-type">${tx.type}</span>
+        <span class="tx-link-text">${tx.hash.slice(0,6)}...${tx.hash.slice(-4)} ↗</span>
+      `;
+      list.appendChild(item);
+    });
+  }
+}
+
 // INIT
 async function connect() {
   if (!window.ethereum) return alert("MetaMask not found");
@@ -349,33 +429,28 @@ async function connect() {
     get('btnConnect').innerText = account.slice(0,6) + "..." + account.slice(-4);
     setStatus("Connected", "success");
     
-    // IMPORTANT: Don't reload on chain change, just re-check
     window.ethereum.on('chainChanged', () => checkNetwork());
     checkNetwork();
+    loadHistory(); // Load saved txs
   } catch(e) { setStatus("Connection Failed", "error"); }
 }
 
 async function setTab(tab) {
   currTab = tab;
-  // UI Switch
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.btn-main').forEach(b => b.disabled = true); // Safety disable
+  document.querySelectorAll('.action-btn').forEach(b => b.disabled = true);
   event.target.classList.add('active');
   
   ['mint','bridge','unwrap'].forEach(t => get(`tab-${t}`).classList.add('hidden'));
   get(`tab-${tab}`).classList.remove('hidden');
   
-  // Re-enable specific buttons based on state if needed, or wait for logic
   if(tab === 'mint') get('btnMint').disabled = false;
-  
   if(account) checkNetwork();
 }
 
 async function checkNetwork() {
-  // Re-init provider to catch network change
   provider = new ethers.BrowserProvider(window.ethereum);
   signer = await provider.getSigner();
-  
   const net = await provider.getNetwork();
   const cid = Number(net.chainId);
   
@@ -386,7 +461,6 @@ async function checkNetwork() {
     setStatus(`Switch to ${name}`, "busy");
     try {
       await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: target.idHex }] });
-      // UI will update via the 'chainChanged' listener calling this function again
     } catch(e) {
       if(e.code === 4902 && currTab === 'unwrap') {
         await window.ethereum.request({
@@ -398,8 +472,6 @@ async function checkNetwork() {
   } else {
     setStatus(`Connected: ${name}`, "success");
     updateBalance();
-    
-    // Enable relevant initial buttons
     if(currTab==='mint') get('btnMint').disabled = false;
   }
 }
@@ -417,16 +489,16 @@ async function updateBalance() {
   } catch(e) { console.log(e); }
 }
 
-// --- LOGIC ---
-
+// LOGIC
 async function doMint() {
   try {
     const amt = ethers.parseUnits(get('inMint').value, 6);
     const c = new ethers.Contract(CONF.SEPOLIA.token, ABIS.ERC20, signer);
     setStatus("Minting...", "busy");
     const tx = await c.mint(account, amt);
+    addTx("Mint", tx.hash, "SEP");
     await tx.wait();
-    setStatus("Minted Successfully! ✅", "success");
+    setStatus("Minted Successfully", "success");
     updateBalance();
   } catch(e) { setStatus("Mint Failed", "error"); }
 }
@@ -436,8 +508,10 @@ async function doApproveBridge() {
     const amt = ethers.parseUnits(get('inBridge').value, 6);
     const c = new ethers.Contract(CONF.SEPOLIA.token, ABIS.ERC20, signer);
     setStatus("Approving...", "busy");
-    await (await c.approve(CONF.SEPOLIA.oapp, amt)).wait();
-    setStatus("Approved ✅", "success");
+    const tx = await c.approve(CONF.SEPOLIA.oapp, amt);
+    addTx("Approve", tx.hash, "SEP");
+    await tx.wait();
+    setStatus("Approved", "success");
   } catch(e) { setStatus("Approve Failed", "error"); }
 }
 
@@ -446,7 +520,7 @@ async function doQuote() {
     const amt = ethers.parseUnits(get('inBridge').value, 6);
     const c = new ethers.Contract(CONF.SEPOLIA.oapp, ABIS.OFT, signer);
     const p = [CONF.SEPOLIA.eid, pad(account), amt, amt, CONF.SEPOLIA.lzOpt, "0x", "0x"];
-    setStatus("Quoting Fee...", "busy");
+    setStatus("Quoting...", "busy");
     const f = await c.quoteSend(p, false);
     bridgeFee = f[0];
     setStatus(`Fee: ${ethers.formatEther(bridgeFee).slice(0,6)} ETH`, "success");
@@ -462,8 +536,9 @@ async function doBridge() {
     const p = [CONF.SEPOLIA.eid, pad(account), amt, amt, CONF.SEPOLIA.lzOpt, "0x", "0x"];
     setStatus("Bridging...", "busy");
     const tx = await c.send(p, [bridgeFee, 0], account, {value: bridgeFee});
+    addTx("Bridge", tx.hash, "SEP");
     await tx.wait();
-    setStatus("Bridge Sent! ✅", "success");
+    setStatus("Bridge Sent", "success");
     updateBalance();
   } catch(e) { setStatus("Bridge Failed", "error"); }
 }
@@ -473,8 +548,10 @@ async function doApproveUnwrap() {
     const amt = ethers.parseUnits(get('inUnwrap').value, 6);
     const c = new ethers.Contract(CONF.STABLE.token, ABIS.ERC20, signer);
     setStatus("Approving...", "busy");
-    await (await c.approve(CONF.STABLE.wrapper, amt)).wait();
-    setStatus("Approved ✅", "success");
+    const tx = await c.approve(CONF.STABLE.wrapper, amt);
+    addTx("Approve", tx.hash, "STABLE");
+    await tx.wait();
+    setStatus("Approved", "success");
     get('btnUnwrap').disabled = false;
   } catch(e) { setStatus("Approve Failed", "error"); }
 }
@@ -484,8 +561,10 @@ async function doSwap() {
     const amt = ethers.parseUnits(get('inUnwrap').value, 6);
     const c = new ethers.Contract(CONF.STABLE.wrapper, ABIS.WRAPPER, signer);
     setStatus("Unwrapping...", "busy");
-    await (await c.withdraw(amt)).wait();
-    setStatus("Unwrapped! You have gUSDT ✅", "success");
+    const tx = await c.withdraw(amt);
+    addTx("Unwrap", tx.hash, "STABLE");
+    await tx.wait();
+    setStatus("Unwrapped Complete", "success");
     updateBalance();
   } catch(e) { setStatus("Unwrap Failed", "error"); }
 }
