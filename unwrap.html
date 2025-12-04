@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>FlowStable • Unwrap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
+  <style>
+    /* FLOWSTABLE THEME */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif; }
+    
+    body {
+      background: radial-gradient(circle at top, #020617 0, #000 55%);
+      color: #e5e7eb;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .page { width: 100%; max-width: 440px; }
+
+    .header { text-align: center; margin-bottom: 24px; }
+    .logo { font-size: 2rem; font-weight: 700; letter-spacing: -0.04em; color: #f9fafb; text-decoration: none; }
+    .logo span { color: #3b82f6; }
+    .tagline { margin-top: 4px; font-size: 0.85rem; color: #6b7280; }
+
+    .card {
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .tabs { display: flex; background: rgba(2, 6, 23, 0.5); padding: 4px; border-radius: 999px; margin-bottom: 24px; border: 1px solid rgba(31, 41, 55, 0.5); }
+    .tab-item {
+      flex: 1; text-align: center; padding: 8px; font-size: 0.85rem; font-weight: 500;
+      color: #9ca3af; text-decoration: none; border-radius: 999px; transition: 0.2s;
+    }
+    .tab-item:hover { color: #f9fafb; }
+    .tab-item.active { background: #3b82f6; color: #fff; font-weight: 600; box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3); }
+
+    .input-group { margin-bottom: 16px; }
+    .label-row { display: flex; justify-content: space-between; font-size: 0.8rem; color: #9ca3af; margin-bottom: 8px; }
+    .input-wrapper {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #020617; border: 1px solid #1f2937; border-radius: 12px; padding: 14px;
+      transition: border-color 0.2s;
+    }
+    .input-wrapper:focus-within { border-color: #3b82f6; }
+    
+    input { background: transparent; border: none; font-size: 1.5rem; color: #f9fafb; width: 60%; outline: none; font-weight: 600; }
+    input::placeholder { color: #4b5563; }
+
+    .token-badge { background: #1e293b; padding: 6px 12px; border-radius: 999px; font-size: 0.85rem; color: #e2e8f0; font-weight: 600; }
+
+    .btn {
+      width: 100%; padding: 14px; border-radius: 999px; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: 0.2s;
+    }
+    .btn-primary { background: #2563eb; color: #fff; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+    .btn-primary:disabled { background: #1e293b; color: #64748b; cursor: not-allowed; box-shadow: none; }
+
+    .btn-secondary { background: rgba(255,255,255,0.05); color: #3b82f6; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 12px; }
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+
+    .wallet-btn { margin-bottom: 12px; background: rgba(37, 99, 235, 0.1); color: #3b82f6; }
+    .status { margin-top: 16px; text-align: center; font-size: 0.8rem; color: #64748b; }
+  </style>
+</head>
+<body>
+
+<div class="page">
+  <div class="header">
+    <div class="logo">Flow<span>Stable</span></div>
+    <p class="tagline">Built for Stable.xyz</p>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <a href="mint.html" class="tab-item">Mint</a>
+      <a href="bridge.html" class="tab-item">Bridge</a>
+      <div class="tab-item active">Unwrap</div>
+    </div>
+
+    <div class="input-group">
+      <div class="label-row">
+        <span>Unwrap Amount</span>
+        <span id="balUnwrap">Bal: --</span>
+      </div>
+      <div class="input-wrapper">
+        <input id="unwrapAmount" type="text" placeholder="0.0" value="100">
+        <div class="token-badge">USDT0</div>
+      </div>
+    </div>
+
+    <button id="connectBtn" class="btn wallet-btn">Connect Wallet</button>
+    
+    <button id="approveUnwrapBtn" class="btn btn-secondary" onclick="executeApprove()">
+      1. Approve
+    </button>
+
+    <button id="unwrapActionBtn" class="btn btn-primary" onclick="executeSwap()" disabled>
+      2. Swap to gUSDT
+    </button>
+
+    <div class="status" id="statusBox">Connect wallet (Stable)</div>
+  </div>
+</div>
+
+<script>
+/* UNWRAP LOGIC (Stable) */
+const CONFIG = {
+    idHex: "0x899", // 2201
+    idDec: 2201,
+    rpc: "https://rpc.testnet.stable.xyz",
+    usdt0: "0x78Cf24370174180738C5B8E352B6D14c83a6c9A9",
+    wrapper: "0xcAB8F3ed8528655E0C2fad1C504c6CfEccf50B90"
+};
+
+const ABI = {
+    ERC20: [
+        "function approve(address spender, uint256 amount) public returns (bool)",
+        "function balanceOf(address) view returns (uint256)"
+    ],
+    WRAPPER: [ "function withdraw(uint256 amount) returns (uint256)" ]
+};
+
+let provider, signer, account;
+const els = {
+    status: document.getElementById('statusBox'),
+    connectBtn: document.getElementById('connectBtn'),
+    balUnwrap: document.getElementById('balUnwrap'),
+    inUnwrap: document.getElementById('unwrapAmount'),
+    btnSwap: document.getElementById('unwrapActionBtn')
+};
+
+function log(msg) { els.status.innerText = msg; }
+
+async function connectWallet() {
+    if (!window.ethereum) return alert("MetaMask not found!");
+    try {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        const accounts = await provider.send("eth_requestAccounts", []);
+        account = accounts[0];
+        signer = await provider.getSigner();
+        els.connectBtn.innerText = account.slice(0,6) + "..." + account.slice(-4);
+        window.ethereum.on('chainChanged', () => window.location.reload());
+        checkNetworkAndBalance();
+    } catch (e) { log("Connection failed"); }
+}
+
+async function checkNetworkAndBalance() {
+    if (!account) return;
+    const net = await provider.getNetwork();
+    if (Number(net.chainId) !== CONFIG.idDec) {
+        log("Switching to Stable...");
+        try {
+            await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CONFIG.idHex }] });
+        } catch(switchError) {
+            if (switchError.code === 4902) {
+                try {
+                    await window.ethereum.request({
+                        method: "wallet_addEthereumChain",
+                        params: [{
+                            chainId: CONFIG.idHex, chainName: "Stable Testnet",
+                            rpcUrls: [CONFIG.rpc],
+                            nativeCurrency: { name: "gUSDT", symbol: "gUSDT", decimals: 18 }
+                        }]
+                    });
+                } catch(e) {}
+            }
+        }
+    } else {
+        log("Connected to Stable");
+        els.connectBtn.style.display = "none";
+        updateBalance();
+    }
+}
+
+async function updateBalance() {
+    try {
+        const contract = new ethers.Contract(CONFIG.usdt0, ABI.ERC20, provider);
+        const bal = await contract.balanceOf(account);
+        // FIXED: 6 decimals
+        els.balUnwrap.innerText = `Bal: ${ethers.formatUnits(bal, 6)}`;
+    } catch (e) {}
+}
+
+async function executeApprove() {
+    if (!account) return alert("Connect wallet");
+    try {
+        const val = els.inUnwrap.value;
+        const contract = new ethers.Contract(CONFIG.usdt0, ABI.ERC20, signer);
+        const amt = ethers.parseUnits(val, 6);
+        log("Approving...");
+        const tx = await contract.approve(CONFIG.wrapper, amt);
+        await tx.wait();
+        log("Approved! Ready to Swap.");
+        els.btnSwap.disabled = false;
+    } catch (e) { log(e.message); }
+}
+
+async function executeSwap() {
+    if (!account) return alert("Connect wallet");
+    try {
+        const val = els.inUnwrap.value;
+        const amt = ethers.parseUnits(val, 6);
+        const wrapper = new ethers.Contract(CONFIG.wrapper, ABI.WRAPPER, signer);
+        log("Unwrapping...");
+        const tx = await wrapper.withdraw(amt);
+        await tx.wait();
+        log("Unwrap Success! ✅");
+        updateBalance();
+        alert("Mission Complete! Tokens Unwrapped.");
+    } catch (e) { log(e.message); }
+}
+
+els.connectBtn.addEventListener('click', connectWallet);
+</script>
+</body>
+</html>

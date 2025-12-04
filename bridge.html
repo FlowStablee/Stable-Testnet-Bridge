@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>FlowStable • Bridge</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
+  <style>
+    /* FLOWSTABLE THEME */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif; }
+    
+    body {
+      background: radial-gradient(circle at top, #020617 0, #000 55%);
+      color: #e5e7eb;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .page { width: 100%; max-width: 440px; }
+
+    .header { text-align: center; margin-bottom: 24px; }
+    .logo { font-size: 2rem; font-weight: 700; letter-spacing: -0.04em; color: #f9fafb; text-decoration: none; }
+    .logo span { color: #3b82f6; }
+    .tagline { margin-top: 4px; font-size: 0.85rem; color: #6b7280; }
+
+    .card {
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .tabs { display: flex; background: rgba(2, 6, 23, 0.5); padding: 4px; border-radius: 999px; margin-bottom: 24px; border: 1px solid rgba(31, 41, 55, 0.5); }
+    .tab-item {
+      flex: 1; text-align: center; padding: 8px; font-size: 0.85rem; font-weight: 500;
+      color: #9ca3af; text-decoration: none; border-radius: 999px; transition: 0.2s;
+    }
+    .tab-item:hover { color: #f9fafb; }
+    .tab-item.active { background: #3b82f6; color: #fff; font-weight: 600; box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3); }
+
+    .input-group { margin-bottom: 16px; }
+    .label-row { display: flex; justify-content: space-between; font-size: 0.8rem; color: #9ca3af; margin-bottom: 8px; }
+    .input-wrapper {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #020617; border: 1px solid #1f2937; border-radius: 12px; padding: 14px;
+      transition: border-color 0.2s;
+    }
+    .input-wrapper:focus-within { border-color: #3b82f6; }
+    
+    input { background: transparent; border: none; font-size: 1.5rem; color: #f9fafb; width: 60%; outline: none; font-weight: 600; }
+    input::placeholder { color: #4b5563; }
+
+    .token-badge { background: #1e293b; padding: 6px 12px; border-radius: 999px; font-size: 0.85rem; color: #e2e8f0; font-weight: 600; }
+
+    .btn {
+      width: 100%; padding: 14px; border-radius: 999px; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: 0.2s;
+    }
+    
+    .btn-primary { background: #2563eb; color: #fff; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+    .btn-primary:disabled { background: #1e293b; color: #64748b; cursor: not-allowed; box-shadow: none; }
+
+    .btn-secondary { background: rgba(255,255,255,0.05); color: #3b82f6; border: 1px solid rgba(255,255,255,0.1); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+
+    .btn-row { display: flex; gap: 10px; margin-bottom: 12px; }
+    .wallet-btn { margin-bottom: 12px; background: rgba(37, 99, 235, 0.1); color: #3b82f6; }
+
+    .status { margin-top: 16px; text-align: center; font-size: 0.8rem; color: #64748b; }
+  </style>
+</head>
+<body>
+
+<div class="page">
+  <div class="header">
+    <div class="logo">Flow<span>Stable</span></div>
+    <p class="tagline">Built for Stable.xyz</p>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <a href="mint.html" class="tab-item">Mint</a>
+      <div class="tab-item active">Bridge</div>
+      <a href="unwrap.html" class="tab-item">Unwrap</a>
+    </div>
+
+    <div class="input-group">
+      <div class="label-row">
+        <span>Send Amount</span>
+        <span id="balBridge">Bal: --</span>
+      </div>
+      <div class="input-wrapper">
+        <input id="bridgeAmount" type="text" placeholder="0.0">
+        <div class="token-badge">USDT0</div>
+      </div>
+    </div>
+
+    <button id="connectBtn" class="btn wallet-btn">Connect Wallet</button>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="executeApprove()">1. Approve</button>
+      <button class="btn btn-secondary" onclick="executeQuote()">2. Quote Fee</button>
+    </div>
+
+    <button id="bridgeActionBtn" class="btn btn-primary" onclick="executeBridge()" disabled>
+      3. Bridge Asset
+    </button>
+
+    <div class="status" id="statusBox">Connect wallet (Sepolia)</div>
+  </div>
+</div>
+
+<script>
+/* BRIDGE LOGIC (Sepolia -> Stable) */
+const CONFIG = {
+    idHex: "0xaa36a7", idDec: 11155111,
+    rpc: "https://eth-sepolia.g.alchemy.com/v2/WddzdzI2o9S3COdT73d5w6AIogbKq4X-", 
+    usdt0: "0xc4DCC311c028e341fd8602D8eB89c5de94625927",
+    oapp: "0xc099cD946d5efCC35A99D64E808c1430cEf08126",
+    lzOptions: "0x00030100110100000000000000000000000000030d40",
+    dstEid: 40374
+};
+
+const ABI = {
+    ERC20: [
+        "function approve(address spender, uint256 amount) public returns (bool)",
+        "function balanceOf(address) view returns (uint256)"
+    ],
+    OFT: [
+        "function quoteSend((uint32,bytes32,uint256,uint256,bytes,bytes,bytes), bool) external view returns (uint256 nativeFee, uint256 lzTokenFee)",
+        "function send((uint32,bytes32,uint256,uint256,bytes,bytes,bytes),(uint256,uint256),address) external payable"
+    ]
+};
+
+let provider, signer, account, cachedNativeFee;
+const els = {
+    status: document.getElementById('statusBox'),
+    connectBtn: document.getElementById('connectBtn'),
+    balBridge: document.getElementById('balBridge'),
+    inBridge: document.getElementById('bridgeAmount'),
+    btnBridge: document.getElementById('bridgeActionBtn')
+};
+
+function log(msg) { els.status.innerText = msg; }
+function hexPad(addr) { return "0x" + ethers.getAddress(addr).slice(2).padStart(64, "0"); }
+
+async function connectWallet() {
+    if (!window.ethereum) return alert("MetaMask not found!");
+    try {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        const accounts = await provider.send("eth_requestAccounts", []);
+        account = accounts[0];
+        signer = await provider.getSigner();
+        els.connectBtn.innerText = account.slice(0,6) + "..." + account.slice(-4);
+        window.ethereum.on('chainChanged', () => window.location.reload());
+        checkNetworkAndBalance();
+    } catch (e) { log("Connection failed"); }
+}
+
+async function checkNetworkAndBalance() {
+    if (!account) return;
+    const net = await provider.getNetwork();
+    if (Number(net.chainId) !== CONFIG.idDec) {
+        log("Wrong Network. Switching...");
+        try {
+            await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CONFIG.idHex }] });
+        } catch(e) {}
+    } else {
+        log("Connected to Sepolia");
+        els.connectBtn.style.display = "none";
+        updateBalance();
+    }
+}
+
+async function updateBalance() {
+    try {
+        const contract = new ethers.Contract(CONFIG.usdt0, ABI.ERC20, provider);
+        const bal = await contract.balanceOf(account);
+        els.balBridge.innerText = `Bal: ${ethers.formatUnits(bal, 6)}`;
+    } catch (e) {}
+}
+
+async function executeApprove() {
+    if (!account) return alert("Connect wallet");
+    try {
+        const val = els.inBridge.value;
+        const contract = new ethers.Contract(CONFIG.usdt0, ABI.ERC20, signer);
+        const amt = ethers.parseUnits(val, 6);
+        log("Approving...");
+        const tx = await contract.approve(CONFIG.oapp, amt);
+        await tx.wait();
+        log("Approved! Now Quote.");
+    } catch (e) { log(e.message); }
+}
+
+async function executeQuote() {
+    if (!account) return alert("Connect wallet");
+    try {
+        const val = els.inBridge.value;
+        const amt = ethers.parseUnits(val, 6);
+        const oft = new ethers.Contract(CONFIG.oapp, ABI.OFT, signer);
+        const params = [CONFIG.dstEid, hexPad(account), amt, amt, CONFIG.lzOptions, "0x", "0x"];
+        log("Quoting Fee...");
+        const fee = await oft.quoteSend(params, false);
+        cachedNativeFee = fee[0];
+        log(`Fee: ${ethers.formatEther(cachedNativeFee).slice(0,6)} ETH. Ready.`);
+        els.btnBridge.disabled = false;
+    } catch (e) { log("Quote failed"); }
+}
+
+async function executeBridge() {
+    if (!cachedNativeFee) return alert("Quote first");
+    try {
+        const val = els.inBridge.value;
+        const amt = ethers.parseUnits(val, 6);
+        const oft = new ethers.Contract(CONFIG.oapp, ABI.OFT, signer);
+        const params = [CONFIG.dstEid, hexPad(account), amt, amt, CONFIG.lzOptions, "0x", "0x"];
+        log("Bridging...");
+        els.btnBridge.disabled = true;
+        const tx = await oft.send(params, [cachedNativeFee, 0], account, { value: cachedNativeFee });
+        log("Tx Sent! Waiting...");
+        await tx.wait();
+        log("Bridge Sent! ✅");
+        setTimeout(() => {
+             if(confirm("Bridged! Go to Unwrap?")) window.location.href = "unwrap.html";
+        }, 500);
+    } catch (e) { log("Bridge failed"); els.btnBridge.disabled = false; }
+}
+
+els.connectBtn.addEventListener('click', connectWallet);
+</script>
+</body>
+</html>
